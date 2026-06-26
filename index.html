@@ -788,7 +788,13 @@ function speak(text, opts = {}) {
       return;
     }
 
+    let resolved = false;
+    const done = () => { if (!resolved) { resolved = true; resolve(); } };
+    // 8秒超时保护：防止某些浏览器 speechSynthesis 卡死不触发 onend/onerror
+    setTimeout(done, 8000);
+
     const doSpeak = (voices) => {
+      if (resolved) return;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = opts.lang || 'en-US';
       u.rate = opts.rate ?? 1;
@@ -817,8 +823,8 @@ function speak(text, opts = {}) {
 
       if (chosenVoice) u.voice = chosenVoice;
 
-      u.onend = () => resolve();
-      u.onerror = () => resolve();
+      u.onend = done;
+      u.onerror = done;
       speechSynthesis.speak(u);
     };
 
@@ -1113,6 +1119,7 @@ function drivePause() {
 function driveNext() {
   stopSpeak();
   STATE.drive.idx++;
+  if (STATE.drive.idx >= STATE.drive.queue.length) STATE.drive.idx = 0;
   if (STATE.drive.playing) {
     STATE.drive.playing = false;
     setTimeout(() => { STATE.drive.playing = true; drivePlay(); }, 200);
