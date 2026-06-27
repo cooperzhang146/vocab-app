@@ -911,7 +911,16 @@ const QUICK_TRANSLATIONS = {
 };
 
 async function translateToChinese(text) {
-  // 尝试 Google Translate（主源）
+  // 尝试 MyMemory API（主源，更准确）
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-CN`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('translate failed');
+    const data = await res.json();
+    const result = data?.responseData?.translatedText || '';
+    if (result && result.length > 0 && !result.toUpperCase().startsWith('MYMEMORY')) return result;
+  } catch {}
+  // 尝试 Google Translate（备用源）
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=${encodeURIComponent(text)}`;
     const res = await fetch(url);
@@ -919,16 +928,7 @@ async function translateToChinese(text) {
     const data = await res.json();
     return data?.[0]?.map(seg => seg[0]).join('') || '';
   } catch {
-    // 尝试 MyMemory API（备用源）
-    try {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-CN`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('backup failed');
-      const data = await res.json();
-      return data?.responseData?.translatedText || '';
-    } catch {
-      return '';
-    }
+    return '';
   }
 }
 
