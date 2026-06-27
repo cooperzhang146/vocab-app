@@ -795,6 +795,8 @@ function speak(text, opts = {}) {
 
     const doSpeak = (voices) => {
       if (resolved) return;
+      // 唤醒语音引擎：某些浏览器/设备会暂停 speechSynthesis
+      try { speechSynthesis.resume(); } catch {}
       const u = new SpeechSynthesisUtterance(text);
       u.lang = opts.lang || 'en-US';
       u.rate = opts.rate ?? 1;
@@ -867,8 +869,11 @@ async function handleLookup() {
       <button class="lr-speak" onclick="speak('${result.word.replace(/'/g,"\\'")}')">🔊 试听</button>
     `;
     const englishMeanings = result.meanings.flatMap(m => m.defs).slice(0, 2).join('; ');
+    // 先翻译单词本身（通常比翻译释义更准确，避免释义中的上下文误导）
     let zh = '';
-    if (englishMeanings) {
+    try { zh = await translateToChinese(result.word); } catch {}
+    // 如果单词翻译为空或太短，再尝试翻译释义
+    if (!zh || zh.length < 2) {
       try { zh = await translateToChinese(englishMeanings); } catch {}
     }
     if (zh) {
@@ -1026,7 +1031,12 @@ function renderReviewCard() {
   $('#cardExample').textContent = w.example || '';
   $('#flashCard').classList.remove('flipped');
   STATE.cardFlipped = false;
-  setTimeout(() => speak(w.word, { rate: STATE.settings.rate }), 200);
+  setTimeout(async () => {
+    for (let r = 0; r < STATE.settings.repeat; r++) {
+      await speak(w.word, { rate: STATE.settings.rate });
+      await wait(500);
+    }
+  }, 200);
 }
 function flipCard() {
   STATE.cardFlipped = !STATE.cardFlipped;
