@@ -768,7 +768,150 @@ async function lookupWord(word) {
   }
 }
 
+// 本地常用多义词映射（避免翻译 API 对简单单词返回错误结果）
+const QUICK_TRANSLATIONS = {
+  'date': '日期；约会；枣',
+  'bank': '银行；河岸',
+  'light': '光；灯；轻的',
+  'run': '跑；经营；运行',
+  'book': '书；预订',
+  'match': '比赛；火柴；匹配',
+  'spring': '春天；泉水；弹簧',
+  'bear': '熊；忍受；携带',
+  'lead': '领导；铅；引导',
+  'wave': '波浪；挥手',
+  'park': '公园；停车',
+  'watch': '手表；观看',
+  'face': '脸；面对',
+  'line': '线；排队；台词',
+  'mean': '意思是；刻薄的',
+  'order': '顺序；命令；订单',
+  'point': '点；指向；观点',
+  'power': '力量；电力；权力',
+  'present': '礼物；出席的；现在',
+  'rest': '休息；剩余部分',
+  'ring': '戒指；铃声',
+  'rock': '岩石；摇滚乐',
+  'room': '房间；空间',
+  'round': '圆的；一轮',
+  'school': '学校；学派',
+  'sense': '感觉；意义',
+  'share': '分享；股份',
+  'show': '展示；演出',
+  'side': '边；侧面；一方',
+  'sign': '标志；签名',
+  'sound': '声音；听起来',
+  'space': '空间；太空',
+  'spell': '拼写；咒语',
+  'spirit': '精神；心灵',
+  'spot': '地点；斑点',
+  'stage': '舞台；阶段',
+  'stamp': '邮票；印章',
+  'stand': '站立；忍受',
+  'state': '状态；国家；陈述',
+  'stay': '停留；保持',
+  'step': '步骤；踩',
+  'stick': '棍子；粘贴',
+  'store': '商店；储存',
+  'story': '故事；楼层',
+  'subject': '主题；科目；主语',
+  'suit': '西装；适合',
+  'supply': '供应；供给',
+  'support': '支持；支撑',
+  'sweet': '甜的；糖果',
+  'switch': '开关；转换',
+  'table': '桌子；表格',
+  'tail': '尾巴；尾随',
+  'take': '拿；花费；乘坐',
+  'taste': '味道；品尝',
+  'tear': '眼泪；撕裂',
+  'tell': '告诉；分辨',
+  'time': '时间；次数；时代',
+  'title': '标题；称号',
+  'top': '顶部；最高的',
+  'touch': '触摸；感动',
+  'track': '轨道；跟踪',
+  'trade': '贸易；交易',
+  'train': '火车；训练',
+  'treat': '对待；治疗；款待',
+  'trick': '技巧；诡计',
+  'trip': '旅行；绊倒',
+  'trouble': '麻烦；困难',
+  'trust': '信任',
+  'try': '尝试；审判',
+  'turn': '转动；转弯',
+  'type': '类型；打字',
+  'value': '价值',
+  'voice': '声音；嗓音',
+  'wait': '等待',
+  'wake': '醒来；唤醒',
+  'walk': '走路；散步',
+  'wall': '墙',
+  'warm': '温暖的',
+  'warn': '警告',
+  'wash': '洗；洗涤',
+  'waste': '浪费；废物',
+  'water': '水；浇水',
+  'way': '路；方法；方式',
+  'wear': '穿；戴；磨损',
+  'weather': '天气',
+  'web': '网；网络',
+  'wedding': '婚礼',
+  'week': '周；星期',
+  'weekend': '周末',
+  'weigh': '称重',
+  'weight': '重量',
+  'welcome': '欢迎',
+  'well': '好；井；健康的',
+  'west': '西方',
+  'wet': '湿的',
+  'wheel': '轮子',
+  'white': '白色的；白色',
+  'whole': '整个的',
+  'wide': '宽的；广泛的',
+  'wife': '妻子',
+  'wild': '野生的；疯狂的',
+  'will': '将；意志；遗嘱',
+  'win': '赢；获胜',
+  'wind': '风；缠绕',
+  'window': '窗户',
+  'wine': '酒；葡萄酒',
+  'wing': '翅膀',
+  'winter': '冬天',
+  'wire': '电线；金属丝',
+  'wish': '愿望；希望',
+  'wonder': '想知道；惊奇',
+  'wood': '木头；树林',
+  'wooden': '木制的',
+  'wool': '羊毛',
+  'word': '单词；话',
+  'work': '工作；作品；运转',
+  'worker': '工人',
+  'world': '世界',
+  'worry': '担心；烦恼',
+  'worse': '更坏的',
+  'worst': '最坏的',
+  'worth': '值得的；价值',
+  'would': '将会',
+  'wound': '伤口；受伤',
+  'write': '写',
+  'wrong': '错误的；不对的',
+  'yard': '院子；码',
+  'year': '年',
+  'yellow': '黄色的；黄色',
+  'yes': '是',
+  'yesterday': '昨天',
+  'yet': '还；但是',
+  'you': '你；你们',
+  'young': '年轻的',
+  'your': '你的；你们的',
+  'yourself': '你自己',
+  'youth': '青年；青春',
+  'zone': '区域；地带'
+};
+
 async function translateToChinese(text) {
+  // 尝试 Google Translate（主源）
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=${encodeURIComponent(text)}`;
     const res = await fetch(url);
@@ -776,67 +919,55 @@ async function translateToChinese(text) {
     const data = await res.json();
     return data?.[0]?.map(seg => seg[0]).join('') || '';
   } catch {
-    return '';
+    // 尝试 MyMemory API（备用源）
+    try {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-CN`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('backup failed');
+      const data = await res.json();
+      return data?.responseData?.translatedText || '';
+    } catch {
+      return '';
+    }
   }
 }
 
-// ========== TTS 朗读（自动优选高质量嗓音） ==========
+// ========== TTS 朗读 ==========
+// 在用户首次交互的同步上下文中解锁 TTS（Android Chrome 必需）
+function unlockTTS() {
+  if (!('speechSynthesis' in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(' ');
+    speechSynthesis.speak(u);
+    speechSynthesis.cancel();
+  } catch {}
+}
+
 function speak(text, opts = {}) {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window) || !text) {
       resolve();
       return;
     }
-
     let resolved = false;
     const done = () => { if (!resolved) { resolved = true; resolve(); } };
-    // 8秒超时保护：防止某些浏览器 speechSynthesis 卡死不触发 onend/onerror
-    setTimeout(done, 8000);
+    // 6秒超时保护
+    setTimeout(done, 6000);
 
-    const doSpeak = (voices) => {
-      if (resolved) return;
-      // 唤醒语音引擎：某些浏览器/设备会暂停 speechSynthesis
-      try { speechSynthesis.resume(); } catch {}
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = opts.lang || 'en-US';
-      u.rate = opts.rate ?? 1;
-      u.pitch = opts.pitch ?? 1;
-      u.volume = opts.volume ?? 1;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = opts.lang || 'en-US';
+    u.rate = opts.rate ?? 1;
+    u.pitch = opts.pitch ?? 1;
+    u.volume = opts.volume ?? 1;
+    u.onend = done;
+    u.onerror = done;
 
-      const isZh = u.lang.startsWith('zh');
-      let chosenVoice = null;
-
-      const enQuality = ['Google', 'Microsoft', 'Samantha', 'Daniel', 'Alex', 'Moira', 'Karen'];
-      const zhQuality = ['Tingting', 'Yaoyao', 'Google', 'Microsoft', 'Meijia'];
-
-      if (isZh) {
-        chosenVoice = voices.find(v =>
-          v.lang.startsWith('zh') && zhQuality.some(k => v.name.includes(k))
-        );
-      } else {
-        chosenVoice = voices.find(v =>
-          v.lang.startsWith('en') && enQuality.some(k => v.name.includes(k))
-        );
-      }
-
-      if (!chosenVoice) {
-        chosenVoice = voices.find(v => isZh ? v.lang.startsWith('zh') : v.lang.startsWith('en'));
-      }
-
-      if (chosenVoice) u.voice = chosenVoice;
-
-      u.onend = done;
-      u.onerror = done;
+    try {
+      speechSynthesis.cancel();
+      speechSynthesis.resume();
       speechSynthesis.speak(u);
-    };
-
-    const voices = speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      doSpeak(voices);
-    } else {
-      speechSynthesis.addEventListener('voiceschanged', () => {
-        doSpeak(speechSynthesis.getVoices());
-      }, { once: true });
+    } catch (e) {
+      done();
     }
   });
 }
@@ -869,9 +1000,12 @@ async function handleLookup() {
       <button class="lr-speak" onclick="speak('${result.word.replace(/'/g,"\\'")}')">🔊 试听</button>
     `;
     const englishMeanings = result.meanings.flatMap(m => m.defs).slice(0, 2).join('; ');
-    // 先翻译单词本身（通常比翻译释义更准确，避免释义中的上下文误导）
-    let zh = '';
-    try { zh = await translateToChinese(result.word); } catch {}
+    // 先查本地映射（避免翻译 API 对简单单词返回错误结果，如 date→枣核）
+    let zh = QUICK_TRANSLATIONS[result.word.toLowerCase()] || '';
+    // 再尝试在线翻译单词本身
+    if (!zh) {
+      try { zh = await translateToChinese(result.word); } catch {}
+    }
     // 如果单词翻译为空或太短，再尝试翻译释义
     if (!zh || zh.length < 2) {
       try { zh = await translateToChinese(englishMeanings); } catch {}
@@ -1335,7 +1469,7 @@ function bindEvents() {
     renderDriveWord({ word: '准备就绪', phonetic: '', meaning: '点击 ▶ 开始播放' });
     $('#driveProgress').textContent = '— / —';
   };
-  $('#enterReviewBtn').onclick = startReview;
+  $('#enterReviewBtn').onclick = () => { unlockTTS(); startReview(); };
   $('#enterAddBtn').onclick = () => { showPage('add'); setTimeout(() => $('#wordInput').focus(), 200); };
   $('#enterLibBtn').onclick = () => { showPage('lib'); refreshLib(); };
 
@@ -1365,7 +1499,7 @@ function bindEvents() {
   $('#goodBtn').onclick = () => reviewAnswer('good');
   $('#masterBtn').onclick = () => reviewAnswer('master');
 
-  $('#drivePlayBtn').onclick = () => { STATE.drive.playing ? drivePause() : drivePlay(); };
+  $('#drivePlayBtn').onclick = () => { unlockTTS(); STATE.drive.playing ? drivePause() : drivePlay(); };
   $('#driveNextBtn').onclick = driveNext;
   $('#drivePrevBtn').onclick = drivePrev;
   $('#driveRepeatBtn').onclick = driveRepeat;

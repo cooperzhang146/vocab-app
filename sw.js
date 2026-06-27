@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vocab-app-v2';
+const CACHE_NAME = 'vocab-app-v3';
 const ASSETS = ['./','./index.html'];
 
 self.addEventListener('install', (e) => {
@@ -14,7 +14,10 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  e.respondWith(caches.match(e.request).then((c) => c || fetch(e.request)));
+  // 网络优先：总是先请求网络，失败后再用缓存
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
 });
 
 self.addEventListener('message', (e) => {
